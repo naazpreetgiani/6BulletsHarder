@@ -14,6 +14,7 @@ let rightPressed = false;
 let upPressed = false;
 let downPressed = false;
 let playerDirection = "up";
+let bulletDirection = "up";
 
 // Player Characteristics
 let player = {
@@ -22,6 +23,15 @@ let player = {
     r: 30,
     color: "blue"
 };
+
+let line = {
+    w: 5,
+    colour: "red",
+    x1: player.x,
+    y1: player.y,
+    x2: player.x,
+    y2: player.y - player.r
+}
 
 // Circles Array
 let circles = [];
@@ -44,20 +54,7 @@ function draw() {
     ctx.arc(player.x, player.y, player.r, 0, 2 * Math.PI)
     ctx.fill();
 
-    for (let i = 0; i < circles.length; i++) {
-        let circle = circles[i];
-        drawCircle(circle);
-        moveCircle(circle);
-        
-        // Check if player collides with circle
-        let d = Math.sqrt((player.x - circles.x)**2 + (player.y - circles.y)**2);
-        if (d < player.r + circles.r) {
-          player.r += (circles.r / 8);
-          console.log(circles.length);
-          circles.splice(i, 1);
-        }
-    }
-
+    // Change player direction
     if (leftPressed) {
         player.x -= 7;
         playerDirection = "left";
@@ -72,13 +69,45 @@ function draw() {
         playerDirection = "down";
     }
 
+    // Draw line to detect the way player is facing
+    ctx.lineWidth = line.w;
+    ctx.strokeStyle =  `${line.colour}`;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(line.x2, line.y2);
+    ctx.stroke();
 
-    if (mouseIsPressed) {
-        let newBullet = singleBullet();
-        newBullet.x = player.x;
-        newBullet.y = player.y;
-        bullets.push(newBullet);
-        mouseIsPressed = false; // Reset the flag to prevent continuous firing
+    // Move line to see which direction the line is facing
+    if (playerDirection === "up") {
+        line.x2 = player.x;
+        line.y2 = player.y - player.r;
+        bulletDirection = "up";
+    } else if (playerDirection === "down") {
+        line.x2 = player.x;
+        line.y2 = player.y + player.r;
+        bulletDirection = "down";
+    } else if (playerDirection === "left") {
+        line.x2 = player.x - player.r;
+        line.y2 = player.y;
+        bulletDirection = "left";
+    } else if (playerDirection === "right") {
+        line.x2 = player.x + player.r;
+        line.y2 = player.y;
+        bulletDirection = "right";
+    }
+
+    for (let i = 0; i < circles.length; i++) {
+        let circle = circles[i];
+        drawCircle(circle);
+        moveCircle(circle);
+        
+        // Check if player collides with circle
+        let d = Math.sqrt((player.x - circle.x)**2 + (player.y - circles.y)**2);
+        if (d < player.r + circle.r) {
+          player.r += (circles.r / 8);
+          console.log(circle.length);
+          circles.splice(i, 1);
+        }
     }
 
     for (let i = 0; i < bullets.length; i++) {
@@ -91,7 +120,7 @@ function draw() {
             let distance = Math.sqrt((bullet.x - circle.x) ** 2 + (bullet.y - circle.y) ** 2);
 
             if (distance <= bullet.r + circle.r) {
-                // Handle collision, e.g., remove the bullet and circle
+                // Handle collision, remove the bullet and circle
                 bullets.splice(i, 1);
                 circles.splice(n, 1);
             }
@@ -161,15 +190,29 @@ function drawBullet(aBullet) {
 }
 
 function moveBullet(aBullet) {
-    if (playerDirection === "up") {
+    let distance = Math.sqrt((aBullet.x - player.x) ** 2 + (aBullet.y - player.y) ** 2);
+
+    if (distance <= aBullet.r + player.r) {
+        if (bulletDirection === "up") {
+            aBullet.y -= aBullet.s;
+        } else if (bulletDirection === "down") {
+            aBullet.y += aBullet.s;
+        } else if (bulletDirection === "left") {
+            aBullet.x -= aBullet.s;
+        } else if (bulletDirection === "right") {
+            aBullet.x += aBullet.s;
+        }
+    }
+
+    if (bulletDirection === "up") {
         aBullet.y -= aBullet.s;
-    } else if (playerDirection === "down") {
+    } else if (bulletDirection === "down") {
         aBullet.y += aBullet.s;
-    } else if (playerDirection === "left") {
-       aBullet.x -= aBullet.s;
-    } else if (playerDirection === "right") {
+    } else if (bulletDirection === "left") {
+        aBullet.x -= aBullet.s;
+    } else if (bulletDirection === "right") {
         aBullet.x += aBullet.s;
-    }  
+    }
 }
 
 // Event Listeners & Handlers
@@ -188,7 +231,7 @@ function keydownHandler(e) {
         upPressed = true;
     } else if (e.code === "ArrowDown") {
         downPressed = true;
-  } 
+    } 
 
     if (player.x - player.r < 0) {
         player.x = player.r;
@@ -205,9 +248,9 @@ function keyupHandler(e) {
       rightPressed = false;
     } else if (e.code === "ArrowUp") {
         upPressed = false;
-      } else if (e.code === "ArrowDown") {
+    } else if (e.code === "ArrowDown") {
         downPressed = false;
-      } 
+    } 
 }
 
 function mousedownHandler() {
